@@ -55,7 +55,12 @@
             font-weight: bold;
             font-size: 1.5rem;
         }
-        /* Hero image size adjustment */
+        /* Hero image size adjustment and centering */
+        .hero-image {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
         .hero-image img {
             width: 80%;
             height: 400px;
@@ -66,6 +71,98 @@
         /* Announcement text color */
         .announcement h2 {
             color: white !important;
+        }
+        /* Shopping cart styles */
+        .cart-icon {
+            position: relative;
+            cursor: pointer;
+            margin-left: 1rem;
+        }
+        .cart-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .cart-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .cart-content {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .cart-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .cart-item img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .cart-item-info {
+            flex: 1;
+        }
+        .cart-total {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-align: right;
+            margin: 1rem 0;
+            color: #e74c3c;
+        }
+        .payment-methods {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        .payment-method {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .payment-method:hover {
+            border-color: #e74c3c;
+            background: #f8f9fa;
+        }
+        .payment-method.selected {
+            border-color: #e74c3c;
+            background: #e74c3c;
+            color: white;
+        }
+        .payment-method i {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
         }
     </style>
 </head>
@@ -92,6 +189,10 @@
             </ul>
             <div class="nav-buttons">
                 <button class="login-btn">Log In</button>
+                <div class="cart-icon" onclick="toggleCart()">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-count" id="cartCount">0</span>
+                </div>
                 <div class="hamburger">
                     <span class="bar"></span>
                     <span class="bar"></span>
@@ -101,22 +202,54 @@
         </div>
     </nav>
 
+    <!-- Shopping Cart Modal -->
+    <div class="cart-modal" id="cartModal">
+        <div class="cart-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2>Shopping Cart</h2>
+                <button onclick="toggleCart()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <div id="cartItems"></div>
+            <div class="cart-total">Total: <span id="cartTotal">0,00 lei</span></div>
+            
+            <h3>Select Payment Method</h3>
+            <div class="payment-methods">
+                <div class="payment-method" onclick="selectPayment('paypal')">
+                    <i class="fab fa-paypal"></i>
+                    <div>PayPal</div>
+                </div>
+                <div class="payment-method" onclick="selectPayment('stripe')">
+                    <i class="fab fa-stripe-s"></i>
+                    <div>Stripe</div>
+                </div>
+                <div class="payment-method" onclick="selectPayment('paysafe')">
+                    <i class="fas fa-credit-card"></i>
+                    <div>PaysafeCard</div>
+                </div>
+            </div>
+            
+            <button onclick="checkout()" style="width: 100%; background: #e74c3c; color: white; border: none; padding: 1rem; border-radius: 10px; font-size: 1.1rem; cursor: pointer; margin-top: 1rem;">
+                Proceed to Checkout
+            </button>
+        </div>
+    </div>
+
     <!-- Hero Section -->
     <section class="hero">
         <div class="hero-content">
             <h1>Discover Your Unique Style</h1>
             <p>Express yourself with our premium collection</p>
-            <button class="cta-btn">Shop Now</button>
+            <button class="cta-btn" onclick="scrollToSection('collection')">Shop Now</button>
         </div>
         <div class="hero-image">
             <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" alt="Fashion Collection">
         </div>
     </section>
 
-    <!-- Latest Collection -->
-    <section class="collection">
+    <!-- New Section -->
+    <section id="new" class="collection">
         <div class="container">
-            <h2>Explore Our Latest Collection</h2>
+            <h2>New Arrivals</h2>
             <div class="products-grid">
                 <div class="product-card">
                     <div class="product-image">
@@ -125,7 +258,7 @@
                     <div class="product-info">
                         <h3>A-Royal Unisex Tee</h3>
                         <p class="price">50,00 lei</p>
-                        <button class="add-to-cart">Add to Cart</button>
+                        <button class="add-to-cart" onclick="addToCart('A-Royal Unisex Tee', 50, 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2080&q=80')">Add to Cart</button>
                     </div>
                 </div>
                 <div class="product-card">
@@ -135,7 +268,7 @@
                     <div class="product-info">
                         <h3>Premium Hoodie</h3>
                         <p class="price">120,00 lei</p>
-                        <button class="add-to-cart">Add to Cart</button>
+                        <button class="add-to-cart" onclick="addToCart('Premium Hoodie', 120, 'https://images.unsplash.com/photo-1434389677669-e08b5c80b6f9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2055&q=80')">Add to Cart</button>
                     </div>
                 </div>
                 <div class="product-card">
@@ -145,11 +278,127 @@
                     <div class="product-info">
                         <h3>Designer Jeans</h3>
                         <p class="price">200,00 lei</p>
-                        <button class="add-to-cart">Add to Cart</button>
+                        <button class="add-to-cart" onclick="addToCart('Designer Jeans', 200, 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')">Add to Cart</button>
                     </div>
                 </div>
             </div>
-            <p class="coming-soon">More clothes and accessories on the way!</p>
+        </div>
+    </section>
+
+    <!-- Women Section -->
+    <section id="women" class="collection" style="background: #f8f9fa;">
+        <div class="container">
+            <h2>Women's Collection</h2>
+            <div class="products-grid">
+                <div class="product-card">
+                    <div class="product-image">
+                        <img src="https://images.unsplash.com/photo-1434389677669-e08b5c80b6f9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2055&q=80" alt="Women's Dress">
+                    </div>
+                    <div class="product-info">
+                        <h3>Elegant Dress</h3>
+                        <p class="price">180,00 lei</p>
+                        <button class="add-to-cart" onclick="addToCart('Elegant Dress', 180, 'https://images.unsplash.com/photo-1434389677669-e08b5c80b6f9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2055&q=80')">Add to Cart</button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image">
+                        <img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2080&q=80" alt="Women's Blouse">
+                    </div>
+                    <div class="product-info">
+                        <h3>Silk Blouse</h3>
+                        <p class="price">95,00 lei</p>
+                        <button class="add-to-cart" onclick="addToCart('Silk Blouse', 95, 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2080&q=80')">Add to Cart</button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image">
+                        <img src="https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" alt="Women's Skirt">
+                    </div>
+                    <div class="product-info">
+                        <h3>Classic Skirt</h3>
+                        <p class="price">75,00 lei</p>
+                        <button class="add-to-cart" onclick="addToCart('Classic Skirt', 75, 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')">Add to Cart</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Men Section -->
+    <section id="men" class="collection">
+        <div class="container">
+            <h2>Men's Collection</h2>
+            <div class="products-grid">
+                <div class="product-card">
+                    <div class="product-image">
+                        <img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2080&q=80" alt="Men's Shirt">
+                    </div>
+                    <div class="product-info">
+                        <h3>Classic Shirt</h3>
+                        <p class="price">85,00 lei</p>
+                        <button class="add-to-cart" onclick="addToCart('Classic Shirt', 85, 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2080&q=80')">Add to Cart</button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image">
+                        <img src="https://images.unsplash.com/photo-1434389677669-e08b5c80b6f9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2055&q=80" alt="Men's Jacket">
+                    </div>
+                    <div class="product-info">
+                        <h3>Leather Jacket</h3>
+                        <p class="price">250,00 lei</p>
+                        <button class="add-to-cart" onclick="addToCart('Leather Jacket', 250, 'https://images.unsplash.com/photo-1434389677669-e08b5c80b6f9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2055&q=80')">Add to Cart</button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image">
+                        <img src="https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" alt="Men's Pants">
+                    </div>
+                    <div class="product-info">
+                        <h3>Casual Pants</h3>
+                        <p class="price">120,00 lei</p>
+                        <button class="add-to-cart" onclick="addToCart('Casual Pants', 120, 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')">Add to Cart</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- More Section -->
+    <section id="more" class="collection" style="background: #f8f9fa;">
+        <div class="container">
+            <h2>Accessories & More</h2>
+            <div class="products-grid">
+                <div class="product-card">
+                    <div class="product-image">
+                        <img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2080&q=80" alt="Handbag">
+                    </div>
+                    <div class="product-info">
+                        <h3>Designer Handbag</h3>
+                        <p class="price">180,00 lei</p>
+                        <button class="add-to-cart" onclick="addToCart('Designer Handbag', 180, 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2080&q=80')">Add to Cart</button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image">
+                        <img src="https://images.unsplash.com/photo-1434389677669-e08b5c80b6f9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2055&q=80" alt="Watch">
+                    </div>
+                    <div class="product-info">
+                        <h3>Luxury Watch</h3>
+                        <p class="price">450,00 lei</p>
+                        <button class="add-to-cart" onclick="addToCart('Luxury Watch', 450, 'https://images.unsplash.com/photo-1434389677669-e08b5c80b6f9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2055&q=80')">Add to Cart</button>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image">
+                        <img src="https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" alt="Sunglasses">
+                    </div>
+                    <div class="product-info">
+                        <h3>Premium Sunglasses</h3>
+                        <p class="price">95,00 lei</p>
+                        <button class="add-to-cart" onclick="addToCart('Premium Sunglasses', 95, 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')">Add to Cart</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -196,7 +445,7 @@
                         <li><a href="#new">New</a></li>
                         <li><a href="#women">Women</a></li>
                         <li><a href="#men">Men</a></li>
-                        <li><a href="#store">Our Store</a></li>
+                        <li><a href="#more">More</a></li>
                     </ul>
                 </div>
                 <div class="footer-section">

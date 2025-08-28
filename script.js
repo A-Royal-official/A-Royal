@@ -1,3 +1,7 @@
+// Shopping Cart Variables
+let cart = [];
+let selectedPayment = null;
+
 // Mobile Navigation Toggle
 const hamburger = document.querySelector('.hamburger');
 const navMenu = document.querySelector('.nav-menu');
@@ -28,6 +32,162 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         }
     });
 });
+
+// Scroll to section function
+function scrollToSection(sectionId) {
+    const target = document.getElementById(sectionId);
+    if (target) {
+        target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+    }
+}
+
+// Shopping Cart Functions
+function addToCart(productName, price, imageUrl) {
+    const existingItem = cart.find(item => item.name === productName);
+    
+    if (existingItem) {
+        existingItem.quantity += 1;
+    } else {
+        cart.push({
+            name: productName,
+            price: price,
+            image: imageUrl,
+            quantity: 1
+        });
+    }
+    
+    updateCartCount();
+    showNotification(`Added ${productName} to cart!`, 'success');
+    
+    // Update button text temporarily
+    const button = event.target;
+    const originalText = button.textContent;
+    button.textContent = 'Added!';
+    button.style.background = '#27ae60';
+    
+    setTimeout(() => {
+        button.textContent = originalText;
+        button.style.background = '#2c3e50';
+    }, 2000);
+}
+
+function updateCartCount() {
+    const cartCount = document.getElementById('cartCount');
+    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    cartCount.textContent = totalItems;
+}
+
+function toggleCart() {
+    const cartModal = document.getElementById('cartModal');
+    if (cartModal.style.display === 'flex') {
+        cartModal.style.display = 'none';
+    } else {
+        cartModal.style.display = 'flex';
+        renderCart();
+    }
+}
+
+function renderCart() {
+    const cartItems = document.getElementById('cartItems');
+    const cartTotal = document.getElementById('cartTotal');
+    
+    if (cart.length === 0) {
+        cartItems.innerHTML = '<p style="text-align: center; color: #6c757d;">Your cart is empty</p>';
+        cartTotal.textContent = '0,00 lei';
+        return;
+    }
+    
+    let total = 0;
+    cartItems.innerHTML = '';
+    
+    cart.forEach((item, index) => {
+        total += item.price * item.quantity;
+        
+        const cartItem = document.createElement('div');
+        cartItem.className = 'cart-item';
+        cartItem.innerHTML = `
+            <img src="${item.image}" alt="${item.name}">
+            <div class="cart-item-info">
+                <h4>${item.name}</h4>
+                <p>${item.price},00 lei × ${item.quantity}</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button onclick="updateQuantity(${index}, -1)" style="background: #6c757d; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer;">-</button>
+                <span>${item.quantity}</span>
+                <button onclick="updateQuantity(${index}, 1)" style="background: #6c757d; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer;">+</button>
+                <button onclick="removeFromCart(${index})" style="background: #e74c3c; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; margin-left: 0.5rem;">×</button>
+            </div>
+        `;
+        cartItems.appendChild(cartItem);
+    });
+    
+    cartTotal.textContent = `${total},00 lei`;
+}
+
+function updateQuantity(index, change) {
+    cart[index].quantity += change;
+    
+    if (cart[index].quantity <= 0) {
+        removeFromCart(index);
+    } else {
+        updateCartCount();
+        renderCart();
+    }
+}
+
+function removeFromCart(index) {
+    cart.splice(index, 1);
+    updateCartCount();
+    renderCart();
+}
+
+function selectPayment(method) {
+    selectedPayment = method;
+    
+    // Remove previous selection
+    document.querySelectorAll('.payment-method').forEach(pm => {
+        pm.classList.remove('selected');
+    });
+    
+    // Add selection to clicked method
+    event.target.closest('.payment-method').classList.add('selected');
+}
+
+function checkout() {
+    if (cart.length === 0) {
+        showNotification('Your cart is empty!', 'error');
+        return;
+    }
+    
+    if (!selectedPayment) {
+        showNotification('Please select a payment method!', 'error');
+        return;
+    }
+    
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    // Simulate payment processing
+    showNotification('Processing payment...', 'info');
+    
+    setTimeout(() => {
+        showNotification(`Payment successful! Total: ${total},00 lei via ${selectedPayment.toUpperCase()}`, 'success');
+        
+        // Clear cart
+        cart = [];
+        updateCartCount();
+        renderCart();
+        toggleCart();
+        
+        // Reset payment selection
+        selectedPayment = null;
+        document.querySelectorAll('.payment-method').forEach(pm => {
+            pm.classList.remove('selected');
+        });
+    }, 2000);
+}
 
 // Login button functionality
 const loginBtn = document.querySelector('.login-btn');
@@ -372,27 +532,6 @@ function closeModal(modal) {
     }, 300);
 }
 
-// Add to cart functionality
-document.querySelectorAll('.add-to-cart').forEach(button => {
-    button.addEventListener('click', function() {
-        const productName = this.parentElement.querySelector('h3').textContent;
-        const productPrice = this.parentElement.querySelector('.price').textContent;
-        
-        // Show success message
-        showNotification(`Added ${productName} to cart!`, 'success');
-        
-        // Update button text temporarily
-        const originalText = this.textContent;
-        this.textContent = 'Added!';
-        this.style.background = '#27ae60';
-        
-        setTimeout(() => {
-            this.textContent = originalText;
-            this.style.background = '#2c3e50';
-        }, 2000);
-    });
-});
-
 // Subscribe form functionality
 document.querySelector('.subscribe-form').addEventListener('submit', function(e) {
     e.preventDefault();
@@ -537,6 +676,12 @@ document.addEventListener('keydown', (e) => {
         document.querySelectorAll('.login-modal').forEach(modal => {
             closeModal(modal);
         });
+        
+        // Close cart
+        const cartModal = document.getElementById('cartModal');
+        if (cartModal && cartModal.style.display === 'flex') {
+            toggleCart();
+        }
     }
 });
 

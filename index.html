@@ -9,6 +9,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Official Payment SDKs -->
+    <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=EUR"></script>
+    <script src="https://www.paysafecard.com/en/psc/psc.js"></script>
+    
     <style>
         /* Fallback styles to ensure content is visible */
         body {
@@ -109,7 +115,7 @@
             background: white;
             border-radius: 15px;
             padding: 2rem;
-            max-width: 600px;
+            max-width: 800px;
             width: 90%;
             max-height: 80vh;
             overflow-y: auto;
@@ -164,6 +170,74 @@
             font-size: 2rem;
             margin-bottom: 0.5rem;
         }
+        /* Transport options */
+        .transport-options {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .transport-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .transport-option:last-child {
+            border-bottom: none;
+        }
+        .transport-option input[type="radio"] {
+            margin-right: 0.5rem;
+        }
+        .checkout-form {
+            margin-top: 1rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .payment-container {
+            margin: 1rem 0;
+            padding: 1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            display: none;
+        }
+        .payment-container.active {
+            display: block;
+        }
+        #stripe-card-element {
+            padding: 1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            background: white;
+        }
+        #paypal-button-container {
+            margin: 1rem 0;
+        }
+        .paysafe-form {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+        }
     </style>
 </head>
 <body>
@@ -188,6 +262,18 @@
                 </li>
             </ul>
             <div class="nav-buttons">
+                <div class="currency-selector">
+                    <select id="currencySelect" onchange="changeCurrency(this.value)">
+                        <option value="RON">RON (lei)</option>
+                        <option value="EUR">EUR (€)</option>
+                        <option value="USD">USD ($)</option>
+                        <option value="GBP">GBP (£)</option>
+                        <option value="PLN">PLN (zł)</option>
+                        <option value="CZK">CZK (Kč)</option>
+                        <option value="HUF">HUF (Ft)</option>
+                        <option value="BGN">BGN (лв)</option>
+                    </select>
+                </div>
                 <button class="login-btn">Log In</button>
                 <div class="cart-icon" onclick="toggleCart()">
                     <i class="fas fa-shopping-cart"></i>
@@ -212,15 +298,88 @@
             <div id="cartItems"></div>
             <div class="cart-total">Total: <span id="cartTotal">0,00 lei</span></div>
             
+            <!-- Transport Options -->
+            <div class="transport-options">
+                <h3>Shipping Options</h3>
+                <div class="transport-option">
+                    <label>
+                        <input type="radio" name="transport" value="standard" checked>
+                        Standard Delivery (3-5 business days) - 15,00 lei
+                    </label>
+                </div>
+                <div class="transport-option">
+                    <label>
+                        <input type="radio" name="transport" value="express">
+                        Express Delivery (1-2 business days) - 25,00 lei
+                    </label>
+                </div>
+                <div class="transport-option">
+                    <label>
+                        <input type="radio" name="transport" value="premium">
+                        Premium Delivery (Same day) - 45,00 lei
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Checkout Form -->
+            <div class="checkout-form">
+                <h3>Shipping Information</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="firstName">First Name</label>
+                        <input type="text" id="firstName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lastName">Last Name</label>
+                        <input type="text" id="lastName" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone</label>
+                    <input type="tel" id="phone" required>
+                </div>
+                <div class="form-group">
+                    <label for="address">Address</label>
+                    <input type="text" id="address" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="city">City</label>
+                        <input type="text" id="city" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="postalCode">Postal Code</label>
+                        <input type="text" id="postalCode" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="country">Country</label>
+                    <select id="country" required>
+                        <option value="">Select Country</option>
+                        <option value="RO" selected>Romania</option>
+                        <option value="DE">Germany</option>
+                        <option value="FR">France</option>
+                        <option value="IT">Italy</option>
+                        <option value="ES">Spain</option>
+                        <option value="GB">United Kingdom</option>
+                        <option value="US">United States</option>
+                    </select>
+                </div>
+            </div>
+            
             <h3>Select Payment Method</h3>
             <div class="payment-methods">
+                <div class="payment-method" onclick="selectPayment('stripe')">
+                    <i class="fab fa-stripe-s"></i>
+                    <div>Credit Card</div>
+                </div>
                 <div class="payment-method" onclick="selectPayment('paypal')">
                     <i class="fab fa-paypal"></i>
                     <div>PayPal</div>
-                </div>
-                <div class="payment-method" onclick="selectPayment('stripe')">
-                    <i class="fab fa-stripe-s"></i>
-                    <div>Stripe</div>
                 </div>
                 <div class="payment-method" onclick="selectPayment('paysafe')">
                     <i class="fas fa-credit-card"></i>
@@ -228,8 +387,36 @@
                 </div>
             </div>
             
-            <button onclick="checkout()" style="width: 100%; background: #e74c3c; color: white; border: none; padding: 1rem; border-radius: 10px; font-size: 1.1rem; cursor: pointer; margin-top: 1rem;">
-                Proceed to Checkout
+            <!-- Stripe Payment Container -->
+            <div id="stripe-container" class="payment-container">
+                <h4>Credit Card Details</h4>
+                <div id="stripe-card-element"></div>
+                <div id="stripe-errors" style="color: #e74c3c; margin-top: 0.5rem;"></div>
+            </div>
+            
+            <!-- PayPal Payment Container -->
+            <div id="paypal-container" class="payment-container">
+                <h4>PayPal Checkout</h4>
+                <div id="paypal-button-container"></div>
+            </div>
+            
+            <!-- PaysafeCard Payment Container -->
+            <div id="paysafe-container" class="payment-container">
+                <h4>PaysafeCard Payment</h4>
+                <div class="paysafe-form">
+                    <div class="form-group">
+                        <label for="paysafe-email">Email</label>
+                        <input type="email" id="paysafe-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="paysafe-pin">PIN Code</label>
+                        <input type="text" id="paysafe-pin" placeholder="Enter your PIN" maxlength="16" required>
+                    </div>
+                </div>
+            </div>
+            
+            <button onclick="processCheckout()" style="width: 100%; background: #e74c3c; color: white; border: none; padding: 1rem; border-radius: 10px; font-size: 1.1rem; cursor: pointer; margin-top: 1rem;">
+                Complete Order
             </button>
         </div>
     </div>
@@ -478,6 +665,8 @@
         </div>
     </footer>
 
+    <script src="config.js"></script>
+    <script src="currency.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

@@ -1,6 +1,84 @@
 // Shopping Cart Variables
 let cart = [];
 let selectedPayment = null;
+let selectedTransport = 'standard';
+let stripe = null;
+let cardElement = null;
+
+// Initialize payment systems when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeStripe();
+    initializePayPal();
+    initializePaysafe();
+    
+    // Add transport cost change listener
+    document.querySelectorAll('input[name="transport"]').forEach(radio => {
+        radio.addEventListener('change', updateTotalWithTransport);
+    });
+});
+
+// Initialize Stripe
+function initializeStripe() {
+    // Replace with your actual Stripe publishable key
+    stripe = Stripe('pk_test_51YourStripeKeyHere');
+    
+    // Create card element
+    const elements = stripe.elements();
+    cardElement = elements.create('card', {
+        style: {
+            base: {
+                fontSize: '16px',
+                color: '#424770',
+                '::placeholder': {
+                    color: '#aab7c4',
+                },
+            },
+            invalid: {
+                color: '#9e2146',
+            },
+        },
+    });
+    
+    // Mount card element
+    if (document.getElementById('stripe-card-element')) {
+        cardElement.mount('#stripe-card-element');
+    }
+}
+
+// Initialize PayPal
+function initializePayPal() {
+    if (typeof paypal !== 'undefined') {
+        paypal.Buttons({
+            createOrder: function(data, actions) {
+                const total = calculateTotalWithTransport();
+                return actions.order.create({
+                    purchase_units: [{
+                        amount: {
+                            value: (total / 100).toFixed(2) // Convert to EUR
+                        },
+                        description: 'A-Royal Fashion Purchase'
+                    }]
+                });
+            },
+            onApprove: function(data, actions) {
+                return actions.order.capture().then(function(details) {
+                    showNotification('PayPal payment successful! Order ID: ' + details.id, 'success');
+                    completeOrder('paypal', details.id);
+                });
+            },
+            onError: function(err) {
+                showNotification('PayPal payment failed: ' + err.message, 'error');
+            }
+        }).render('#paypal-button-container');
+    }
+}
+
+// Initialize PaysafeCard
+function initializePaysafe() {
+    // PaysafeCard integration would go here
+    // This requires server-side implementation for security
+    console.log('PaysafeCard initialized');
+}
 
 // Mobile Navigation Toggle
 const hamburger = document.querySelector('.hamburger');
@@ -96,7 +174,11 @@ function renderCart() {
     
     if (cart.length === 0) {
         cartItems.innerHTML = '<p style="text-align: center; color: #6c757d;">Your cart is empty</p>';
-        cartTotal.textContent = '0,00 lei';
+        cartTotal.innerHTML = `
+            <div>Subtotal: ${formatPrice(0)}</div>
+            <div>Shipping: ${formatPrice(0)}</div>
+            <div style="font-size: 1.8rem; color: #e74c3c; margin-top: 0.5rem;">Total: ${formatPrice(0)}</div>
+        `;
         return;
     }
     
@@ -112,7 +194,7 @@ function renderCart() {
             <img src="${item.image}" alt="${item.name}">
             <div class="cart-item-info">
                 <h4>${item.name}</h4>
-                <p>${item.price},00 lei × ${item.quantity}</p>
+                <p>${formatPrice(item.price)} × ${item.quantity}</p>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
                 <button onclick="updateQuantity(${index}, -1)" style="background: #6c757d; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer;">-</button>
@@ -124,7 +206,7 @@ function renderCart() {
         cartItems.appendChild(cartItem);
     });
     
-    cartTotal.textContent = `${total},00 lei`;
+    updateTotalWithTransport();
 }
 
 function updateQuantity(index, change) {
@@ -144,8 +226,62 @@ function removeFromCart(index) {
     renderCart();
 }
 
+function updateTotalWithTransport() {
+    const cartTotal = document.getElementById('cartTotal');
+    const transportRadios = document.querySelectorAll('input[name="transport"]');
+    
+    let transportCost = 15; // Default standard delivery
+    
+    transportRadios.forEach(radio => {
+        if (radio.checked) {
+            selectedTransport = radio.value;
+            switch(radio.value) {
+                case 'standard':
+                    transportCost = 15;
+                    break;
+                case 'express':
+                    transportCost = 25;
+                    break;
+                case 'premium':
+                    transportCost = 45;
+                    break;
+            }
+        }
+    });
+    
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const total = subtotal + transportCost;
+    
+    cartTotal.innerHTML = `
+        <div>Subtotal: ${formatPrice(subtotal)}</div>
+        <div>Shipping: ${formatPrice(transportCost)}</div>
+        <div style="font-size: 1.8rem; color: #e74c3c; margin-top: 0.5rem;">Total: ${formatPrice(total)}</div>
+    `;
+}
+
+function calculateTotalWithTransport() {
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    let transportCost = 15;
+    
+    switch(selectedTransport) {
+        case 'express':
+            transportCost = 25;
+            break;
+        case 'premium':
+            transportCost = 45;
+            break;
+    }
+    
+    return subtotal + transportCost;
+}
+
 function selectPayment(method) {
     selectedPayment = method;
+    
+    // Hide all payment containers
+    document.querySelectorAll('.payment-container').forEach(container => {
+        container.classList.remove('active');
+    });
     
     // Remove previous selection
     document.querySelectorAll('.payment-method').forEach(pm => {
@@ -154,9 +290,22 @@ function selectPayment(method) {
     
     // Add selection to clicked method
     event.target.closest('.payment-method').classList.add('selected');
+    
+    // Show selected payment container
+    switch(method) {
+        case 'stripe':
+            document.getElementById('stripe-container').classList.add('active');
+            break;
+        case 'paypal':
+            document.getElementById('paypal-container').classList.add('active');
+            break;
+        case 'paysafe':
+            document.getElementById('paysafe-container').classList.add('active');
+            break;
+    }
 }
 
-function checkout() {
+function processCheckout() {
     if (cart.length === 0) {
         showNotification('Your cart is empty!', 'error');
         return;
@@ -167,26 +316,208 @@ function checkout() {
         return;
     }
     
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // Validate shipping information
+    if (!validateShippingForm()) {
+        showNotification('Please fill in all shipping information!', 'error');
+        return;
+    }
     
-    // Simulate payment processing
+    const total = calculateTotalWithTransport();
+    
+    switch(selectedPayment) {
+        case 'stripe':
+            processStripePayment(total);
+            break;
+        case 'paypal':
+            // PayPal is handled by their button
+            showNotification('Please use the PayPal button above to complete payment.', 'info');
+            break;
+        case 'paysafe':
+            processPaysafePayment(total);
+            break;
+        default:
+            showNotification('Invalid payment method selected.', 'error');
+    }
+}
+
+function validateShippingForm() {
+    const requiredFields = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'postalCode', 'country'];
+    
+    for (let field of requiredFields) {
+        const element = document.getElementById(field);
+        if (!element.value.trim()) {
+            element.style.borderColor = '#e74c3c';
+            return false;
+        } else {
+            element.style.borderColor = '#e9ecef';
+        }
+    }
+    
+    return true;
+}
+
+function processStripePayment(total) {
+    if (!stripe || !cardElement) {
+        showNotification('Stripe not initialized. Please refresh the page.', 'error');
+        return;
+    }
+    
     showNotification('Processing payment...', 'info');
     
+    // Create payment method
+    stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+        billing_details: {
+            name: document.getElementById('firstName').value + ' ' + document.getElementById('lastName').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value,
+            address: {
+                line1: document.getElementById('address').value,
+                city: document.getElementById('city').value,
+                postal_code: document.getElementById('postalCode').value,
+                country: document.getElementById('country').value
+            }
+        }
+    }).then(function(result) {
+        if (result.error) {
+            showNotification('Payment failed: ' + result.error.message, 'error');
+            document.getElementById('stripe-errors').textContent = result.error.message;
+        } else {
+            // In a real application, you would send this to your server
+            // to complete the payment with your Stripe secret key
+            simulateStripePayment(result.paymentMethod.id, total);
+        }
+    });
+}
+
+function simulateStripePayment(paymentMethodId, total) {
+    // Simulate server-side payment processing
     setTimeout(() => {
-        showNotification(`Payment successful! Total: ${total},00 lei via ${selectedPayment.toUpperCase()}`, 'success');
-        
-        // Clear cart
-        cart = [];
-        updateCartCount();
-        renderCart();
-        toggleCart();
-        
-        // Reset payment selection
-        selectedPayment = null;
-        document.querySelectorAll('.payment-method').forEach(pm => {
-            pm.classList.remove('selected');
-        });
+        showNotification(`Stripe payment successful! Payment ID: ${paymentMethodId}`, 'success');
+        completeOrder('stripe', paymentMethodId);
     }, 2000);
+}
+
+function processPaysafePayment(total) {
+    const email = document.getElementById('paysafe-email').value;
+    const pin = document.getElementById('paysafe-pin').value;
+    
+    if (!email || !pin) {
+        showNotification('Please fill in PaysafeCard details!', 'error');
+        return;
+    }
+    
+    showNotification('Processing PaysafeCard payment...', 'info');
+    
+    // Simulate PaysafeCard payment processing
+    setTimeout(() => {
+        showNotification(`PaysafeCard payment successful!`, 'success');
+        completeOrder('paysafe', 'PSC_' + Date.now());
+    }, 2000);
+}
+
+function completeOrder(paymentMethod, paymentId) {
+    const total = calculateTotalWithTransport();
+    const orderData = {
+        items: cart,
+        total: total,
+        shipping: {
+            method: selectedTransport,
+            cost: selectedTransport === 'standard' ? 15 : selectedTransport === 'express' ? 25 : 45,
+            address: {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                address: document.getElementById('address').value,
+                city: document.getElementById('city').value,
+                postalCode: document.getElementById('postalCode').value,
+                country: document.getElementById('country').value
+            }
+        },
+        payment: {
+            method: paymentMethod,
+            id: paymentId
+        },
+        orderId: 'AR_' + Date.now()
+    };
+    
+    // In a real application, you would send this to your server
+    console.log('Order completed:', orderData);
+    
+    // Show success message
+    showNotification(`Order completed successfully! Order ID: ${orderData.orderId}`, 'success');
+    
+    // Clear cart
+    cart = [];
+    updateCartCount();
+    
+    // Close cart modal
+    toggleCart();
+    
+    // Reset payment selection
+    selectedPayment = null;
+    document.querySelectorAll('.payment-method').forEach(pm => {
+        pm.classList.remove('selected');
+    });
+    
+    // Hide all payment containers
+    document.querySelectorAll('.payment-container').forEach(container => {
+        container.classList.remove('active');
+    });
+    
+    // Reset form
+    document.getElementById('firstName').value = '';
+    document.getElementById('lastName').value = '';
+    document.getElementById('email').value = '';
+    document.getElementById('phone').value = '';
+    document.getElementById('address').value = '';
+    document.getElementById('city').value = '';
+    document.getElementById('postalCode').value = '';
+    document.getElementById('country').value = 'RO';
+    
+    // Reset transport selection
+    document.querySelector('input[name="transport"][value="standard"]').checked = true;
+    
+    // Show order confirmation
+    showOrderConfirmation(orderData);
+}
+
+function showOrderConfirmation(orderData) {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 10001;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: white; padding: 2rem; border-radius: 15px; max-width: 500px; text-align: center;">
+            <div style="color: #27ae60; font-size: 4rem; margin-bottom: 1rem;">✓</div>
+            <h2 style="color: #2c3e50; margin-bottom: 1rem;">Order Confirmed!</h2>
+            <p style="color: #6c757d; margin-bottom: 1rem;">Thank you for your purchase!</p>
+            <div style="background: #f8f9fa; padding: 1rem; border-radius: 10px; margin: 1rem 0;">
+                <p><strong>Order ID:</strong> ${orderData.orderId}</p>
+                <p><strong>Total:</strong> ${formatPrice(orderData.total)}</p>
+                <p><strong>Payment:</strong> ${orderData.payment.method.toUpperCase()}</p>
+                <p><strong>Shipping:</strong> ${orderData.shipping.method} (${formatPrice(orderData.shipping.cost)})</p>
+            </div>
+            <p style="color: #6c757d; font-size: 0.9rem;">You will receive a confirmation email shortly.</p>
+            <button onclick="this.closest('div[style*=\"position: fixed\"]').remove()" style="background: #e74c3c; color: white; border: none; padding: 0.75rem 2rem; border-radius: 25px; margin-top: 1rem; cursor: pointer;">
+                Continue Shopping
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
 }
 
 // Login button functionality

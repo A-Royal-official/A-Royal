@@ -87,6 +87,83 @@ body {
     gap: 1rem;
 }
 
+/* Currency Selector Styles */
+.currency-selector {
+    position: relative;
+}
+
+.currency-selector select {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #2c3e50;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.currency-selector select:hover {
+    border-color: #e74c3c;
+    background: white;
+}
+
+.currency-selector select:focus {
+    outline: none;
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+}
+
+.currency-selector select option {
+    background: white;
+    color: #2c3e50;
+    padding: 0.5rem;
+}
+
+/* Currency Display Styles */
+.price {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #e74c3c;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.price .currency-symbol {
+    font-size: 1.2rem;
+}
+
+.price .original-price {
+    font-size: 0.9rem;
+    color: #6c757d;
+    text-decoration: line-through;
+    margin-left: 0.5rem;
+}
+
+.cart-total {
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-align: right;
+    margin: 1rem 0;
+    color: #e74c3c;
+}
+
+.cart-total .currency-symbol {
+    font-size: 1.2rem;
+}
+
+.cart-total .original-price {
+    font-size: 0.9rem;
+    color: #6c757d;
+    text-decoration: line-through;
+    margin-left: 0.5rem;
+}
+
 .login-btn {
     background: #2c3e50;
     color: white;
@@ -184,14 +261,6 @@ body {
 .cart-item-info p {
     margin: 0;
     color: #6c757d;
-}
-
-.cart-total {
-    font-size: 1.5rem;
-    font-weight: bold;
-    text-align: right;
-    margin: 1rem 0;
-    color: #e74c3c;
 }
 
 .payment-methods {
@@ -355,13 +424,6 @@ body {
     font-size: 1.3rem;
     margin-bottom: 0.5rem;
     color: #2c3e50;
-}
-
-.price {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #e74c3c;
-    margin-bottom: 1rem;
 }
 
 .add-to-cart {
